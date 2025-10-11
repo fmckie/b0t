@@ -15,6 +15,8 @@ const hasUpstashConfig =
   process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN;
 
 // Create rate limiter (10 requests per 10 seconds)
+type RatelimitConfig = ConstructorParameters<typeof Ratelimit>[0];
+
 export const ratelimit = hasUpstashConfig
   ? new Ratelimit({
       redis: Redis.fromEnv(),
@@ -23,7 +25,7 @@ export const ratelimit = hasUpstashConfig
       prefix: '@upstash/ratelimit',
     })
   : new Ratelimit({
-      redis: new Map() as unknown as Parameters<typeof Ratelimit>[0]['redis'],
+      redis: new Map() as unknown as RatelimitConfig['redis'],
       limiter: Ratelimit.slidingWindow(10, '10 s'),
       analytics: false,
     });
@@ -89,7 +91,7 @@ export const strictRatelimit = hasUpstashConfig
       prefix: '@upstash/ratelimit/strict',
     })
   : new Ratelimit({
-      redis: new Map() as unknown as Parameters<typeof Ratelimit>[0]['redis'],
+      redis: new Map() as unknown as RatelimitConfig['redis'],
       limiter: Ratelimit.slidingWindow(3, '60 s'),
       analytics: false,
     });

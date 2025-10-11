@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Twitter, Youtube, Instagram, Settings } from 'lucide-react';
+import { LayoutDashboard, Twitter, Youtube, Instagram, Settings, Cat } from 'lucide-react';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -19,8 +19,9 @@ export function Navbar() {
     <nav className="border-b border-border bg-background">
       <div className="flex h-12 items-center justify-between px-4">
         {/* Logo */}
-        <Link href="/dashboard" className="font-black text-xs tracking-tight">
-          SOCIAL CAT
+        <Link href="/dashboard" className="flex items-center gap-1.5">
+          <Cat className="h-3.5 w-3.5" />
+          <span className="font-black text-xs tracking-tight">SOCIAL CAT</span>
         </Link>
 
         {/* Navigation Links */}

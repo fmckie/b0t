@@ -21,8 +21,10 @@ export const twitterClient = hasTwitterCredentials
     })
   : null;
 
-// Helper function to post a tweet
-export async function postTweet(text: string) {
+/**
+ * Create a new tweet
+ */
+export async function createTweet(text: string) {
   if (!twitterClient) {
     throw new Error('Twitter client is not initialized. Please set Twitter API credentials.');
   }
@@ -32,6 +34,26 @@ export async function postTweet(text: string) {
     return tweet.data;
   } catch (error) {
     console.error('Error posting tweet:', error);
+    throw error;
+  }
+}
+
+// Alias for backwards compatibility
+export const postTweet = createTweet;
+
+/**
+ * Reply to a specific tweet
+ */
+export async function replyToTweet(tweetId: string, text: string) {
+  if (!twitterClient) {
+    throw new Error('Twitter client is not initialized. Please set Twitter API credentials.');
+  }
+
+  try {
+    const reply = await twitterClient.v2.reply(text, tweetId);
+    return reply.data;
+  } catch (error) {
+    console.error('Error replying to tweet:', error);
     throw error;
   }
 }

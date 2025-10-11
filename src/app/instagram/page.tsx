@@ -1,41 +1,40 @@
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { CompactAutomationRow } from '@/components/automation/CompactAutomationRow';
 
 export default function InstagramPage() {
   return (
     <DashboardLayout>
-      <div className="p-6 space-y-6">
+      <div className="p-6 space-y-4">
         {/* Header */}
         <div className="space-y-1">
           <h1 className="font-black text-2xl tracking-tight">Instagram</h1>
-          <p className="text-sm text-secondary">
-            Automate comment replies on your posts
-          </p>
+          <p className="text-xs text-secondary">Monitor and reply to comments & DMs</p>
         </div>
 
-        {/* Coming Soon Notice */}
-        <Card className="border-border bg-surface">
-          <CardHeader>
-            <CardTitle className="text-base font-black tracking-tight">Comment Automation</CardTitle>
-            <CardDescription className="text-xs text-secondary">
-              Configuration interface coming soon
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3 text-xs text-secondary">
-              <p>Planned features:</p>
-              <ul className="space-y-1.5 ml-4 list-disc">
-                <li>Schedule configuration for comment checking</li>
-                <li>System prompts for AI-generated replies</li>
-                <li>Post tracking management</li>
-                <li>Test buttons to verify automation flow</li>
-              </ul>
-              <p className="pt-2 text-xs">
-                Requires Meta Business account and Facebook Page setup
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Compact Automations List */}
+        <div className="space-y-2">
+          <CompactAutomationRow
+            title="Reply to Comments"
+            jobName="instagram-reply-comments"
+            defaultInterval="*/30 * * * *"
+            defaultPrompt="You are a friendly Instagram creator. Reply to comments on your posts in an engaging, authentic way. Keep it brief and positive."
+          />
+
+          <CompactAutomationRow
+            title="Reply to DMs"
+            jobName="instagram-reply-dms"
+            defaultInterval="*/15 * * * *"
+            defaultPrompt="You are a helpful assistant. Reply to Instagram direct messages professionally and helpfully. Be concise and friendly."
+          />
+        </div>
+
+        {/* Setup Notice */}
+        <div className="mt-6 p-3 border border-border rounded-md bg-surface">
+          <p className="text-xs text-secondary">
+            <strong>Note:</strong> Instagram requires a Business or Creator account linked to a Facebook Page.
+            Configure in Settings once credentials are added.
+          </p>
+        </div>
       </div>
     </DashboardLayout>
   );

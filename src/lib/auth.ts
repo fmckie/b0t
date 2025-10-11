@@ -1,64 +1,44 @@
 import NextAuth from 'next-auth';
-import GitHub from 'next-auth/providers/github';
-import Google from 'next-auth/providers/google';
 import Credentials from 'next-auth/providers/credentials';
 
 /**
  * NextAuth.js v5 (Auth.js) Configuration
  *
- * Supports multiple authentication providers:
- * - GitHub OAuth
- * - Google OAuth
- * - Email/Password (Credentials)
+ * Simple email/password authentication for single user app
+ * Credentials stored in environment variables
  */
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
-    // GitHub OAuth Provider
-    GitHub({
-      clientId: process.env.GITHUB_ID,
-      clientSecret: process.env.GITHUB_SECRET,
-    }),
-
-    // Google OAuth Provider
-    Google({
-      clientId: process.env.GOOGLE_ID,
-      clientSecret: process.env.GOOGLE_SECRET,
-    }),
-
-    // Credentials Provider (Email/Password)
-    // WARNING: This is a basic example. In production, use proper password hashing!
+    // Simple Email/Password Authentication
+    // For single user app - credentials stored in environment variables
     Credentials({
-      name: 'Credentials',
+      name: 'credentials',
       credentials: {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        // TODO: Replace with actual database lookup and password verification
-        // This is just a placeholder for demonstration
-
         if (!credentials?.email || !credentials?.password) {
           return null;
         }
 
-        // Example: Check against database
-        // const user = await db.select().from(usersTable).where(eq(usersTable.email, credentials.email));
-        // if (!user || !verifyPassword(credentials.password, user.password)) {
-        //   return null;
-        // }
+        // Check against environment variables (single user)
+        const adminEmail = process.env.ADMIN_EMAIL || 'admin@socialcat.com';
+        const adminPassword = process.env.ADMIN_PASSWORD || 'admin';
 
-        // For now, return null (disabled)
-        // Remove this and implement actual auth logic
-        console.warn('⚠️  Credentials provider is not fully implemented');
+        if (
+          credentials.email === adminEmail &&
+          credentials.password === adminPassword
+        ) {
+          return {
+            id: '1',
+            email: adminEmail,
+            name: 'Admin',
+          };
+        }
+
         return null;
-
-        // Example return when implemented:
-        // return {
-        //   id: user.id,
-        //   email: user.email,
-        //   name: user.name,
-        // };
       },
     }),
   ],

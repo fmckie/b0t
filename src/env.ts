@@ -26,16 +26,20 @@ export const env = createEnv({
     YOUTUBE_REFRESH_TOKEN: z.string().optional(),
     YOUTUBE_REDIRECT_URI: z.string().optional(),
 
+    // Instagram
+    INSTAGRAM_ACCESS_TOKEN: z.string().optional(),
+
     // NextAuth
     AUTH_SECRET: z.string().min(1),
-    GITHUB_ID: z.string().optional(),
-    GITHUB_SECRET: z.string().optional(),
-    GOOGLE_ID: z.string().optional(),
-    GOOGLE_SECRET: z.string().optional(),
+    ADMIN_EMAIL: z.string().email().optional(),
+    ADMIN_PASSWORD: z.string().optional(),
 
     // Upstash Redis (for rate limiting)
     UPSTASH_REDIS_REST_URL: z.string().optional(),
     UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
+
+    // RapidAPI
+    RAPIDAPI_KEY: z.string().optional(),
 
     // Node
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -66,13 +70,13 @@ export const env = createEnv({
     YOUTUBE_CLIENT_SECRET: process.env.YOUTUBE_CLIENT_SECRET,
     YOUTUBE_REFRESH_TOKEN: process.env.YOUTUBE_REFRESH_TOKEN,
     YOUTUBE_REDIRECT_URI: process.env.YOUTUBE_REDIRECT_URI,
+    INSTAGRAM_ACCESS_TOKEN: process.env.INSTAGRAM_ACCESS_TOKEN,
     AUTH_SECRET: process.env.AUTH_SECRET,
-    GITHUB_ID: process.env.GITHUB_ID,
-    GITHUB_SECRET: process.env.GITHUB_SECRET,
-    GOOGLE_ID: process.env.GOOGLE_ID,
-    GOOGLE_SECRET: process.env.GOOGLE_SECRET,
+    ADMIN_EMAIL: process.env.ADMIN_EMAIL,
+    ADMIN_PASSWORD: process.env.ADMIN_PASSWORD,
     UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
     UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
+    RAPIDAPI_KEY: process.env.RAPIDAPI_KEY,
     NODE_ENV: process.env.NODE_ENV,
   },
 
