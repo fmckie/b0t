@@ -6,7 +6,6 @@
 
 import { logger } from './logger';
 import { db, useSQLite } from './db';
-import { appSettingsTable } from './schema';
 
 export async function trackTwitterUsage(type: 'post' | 'read'): Promise<void> {
   try {
@@ -39,67 +38,128 @@ async function trackUsageDirectly(type: 'post' | 'read'): Promise<void> {
   const usageKey = type === 'post' ? 'twitter_post_usage' : 'twitter_read_usage';
 
   try {
-    // Use the same table based on useSQLite flag
-    const table = useSQLite
-      ? (await import('./schema')).appSettingsTableSQLite
-      : (await import('./schema')).appSettingsTablePostgres;
-
     const { eq } = await import('drizzle-orm');
 
-    // Fetch current usage
-    const existingRows = await db
-      .select()
-      .from(table)
-      .where(eq(table.key, usageKey));
+    if (useSQLite) {
+      // SQLite path
+      const { appSettingsTableSQLite } = await import('./schema');
+      const { drizzle } = await import('drizzle-orm/better-sqlite3');
+      const typedDb = db as ReturnType<typeof drizzle>;
 
-    const existing = existingRows[0];
-    const now = Date.now();
+      const existingRows = await typedDb
+        .select()
+        .from(appSettingsTableSQLite)
+        .where(eq(appSettingsTableSQLite.key, usageKey));
 
-    let usage = existing
-      ? JSON.parse(existing.value)
-      : {
-          window15min: { count: 0, resetAt: now + 15 * 60 * 1000 },
-          window1hr: { count: 0, resetAt: now + 60 * 60 * 1000 },
-          window24hr: { count: 0, resetAt: now + 24 * 60 * 60 * 1000 },
-          window30days: { count: 0, resetAt: now + 30 * 24 * 60 * 60 * 1000 },
-        };
+      const existing = existingRows[0];
+      const now = Date.now();
 
-    // Reset expired windows
-    if (usage.window15min.resetAt < now) {
-      usage.window15min = { count: 0, resetAt: now + 15 * 60 * 1000 };
-    }
-    if (usage.window1hr.resetAt < now) {
-      usage.window1hr = { count: 0, resetAt: now + 60 * 60 * 1000 };
-    }
-    if (usage.window24hr.resetAt < now) {
-      usage.window24hr = { count: 0, resetAt: now + 24 * 60 * 60 * 1000 };
-    }
-    if (usage.window30days.resetAt < now) {
-      usage.window30days = { count: 0, resetAt: now + 30 * 24 * 60 * 60 * 1000 };
-    }
+      const usage = existing
+        ? JSON.parse(existing.value)
+        : {
+            window15min: { count: 0, resetAt: now + 15 * 60 * 1000 },
+            window1hr: { count: 0, resetAt: now + 60 * 60 * 1000 },
+            window24hr: { count: 0, resetAt: now + 24 * 60 * 60 * 1000 },
+            window30days: { count: 0, resetAt: now + 30 * 24 * 60 * 60 * 1000 },
+          };
 
-    // Increment all windows
-    usage.window15min.count++;
-    usage.window1hr.count++;
-    usage.window24hr.count++;
-    usage.window30days.count++;
+      // Reset expired windows
+      if (usage.window15min.resetAt < now) {
+        usage.window15min = { count: 0, resetAt: now + 15 * 60 * 1000 };
+      }
+      if (usage.window1hr.resetAt < now) {
+        usage.window1hr = { count: 0, resetAt: now + 60 * 60 * 1000 };
+      }
+      if (usage.window24hr.resetAt < now) {
+        usage.window24hr = { count: 0, resetAt: now + 24 * 60 * 60 * 1000 };
+      }
+      if (usage.window30days.resetAt < now) {
+        usage.window30days = { count: 0, resetAt: now + 30 * 24 * 60 * 60 * 1000 };
+      }
 
-    // Save back to database
-    if (existing) {
-      await db
-        .update(table)
-        .set({
-          value: JSON.stringify(usage),
-          updatedAt: useSQLite ? Math.floor(Date.now() / 1000) : new Date()
-        })
-        .where(eq(table.key, usageKey));
+      // Increment all windows
+      usage.window15min.count++;
+      usage.window1hr.count++;
+      usage.window24hr.count++;
+      usage.window30days.count++;
+
+      // Save back to database
+      if (existing) {
+        const { sql } = await import('drizzle-orm');
+        await typedDb
+          .update(appSettingsTableSQLite)
+          .set({
+            value: JSON.stringify(usage),
+            updatedAt: sql`(unixepoch())`
+          })
+          .where(eq(appSettingsTableSQLite.key, usageKey));
+      } else {
+        await typedDb
+          .insert(appSettingsTableSQLite)
+          .values({ key: usageKey, value: JSON.stringify(usage) });
+      }
+
+      logger.debug({ type, usage }, 'Tracked Twitter API usage (direct)');
     } else {
-      await db
-        .insert(table)
-        .values({ key: usageKey, value: JSON.stringify(usage) });
-    }
+      // PostgreSQL path
+      const { appSettingsTablePostgres } = await import('./schema');
+      const { drizzle } = await import('drizzle-orm/node-postgres');
+      const typedDb = db as ReturnType<typeof drizzle>;
 
-    logger.debug({ type, usage }, 'Tracked Twitter API usage (direct)');
+      const existingRows = await typedDb
+        .select()
+        .from(appSettingsTablePostgres)
+        .where(eq(appSettingsTablePostgres.key, usageKey));
+
+      const existing = existingRows[0];
+      const now = Date.now();
+
+      const usage = existing
+        ? JSON.parse(existing.value)
+        : {
+            window15min: { count: 0, resetAt: now + 15 * 60 * 1000 },
+            window1hr: { count: 0, resetAt: now + 60 * 60 * 1000 },
+            window24hr: { count: 0, resetAt: now + 24 * 60 * 60 * 1000 },
+            window30days: { count: 0, resetAt: now + 30 * 24 * 60 * 60 * 1000 },
+          };
+
+      // Reset expired windows
+      if (usage.window15min.resetAt < now) {
+        usage.window15min = { count: 0, resetAt: now + 15 * 60 * 1000 };
+      }
+      if (usage.window1hr.resetAt < now) {
+        usage.window1hr = { count: 0, resetAt: now + 60 * 60 * 1000 };
+      }
+      if (usage.window24hr.resetAt < now) {
+        usage.window24hr = { count: 0, resetAt: now + 24 * 60 * 60 * 1000 };
+      }
+      if (usage.window30days.resetAt < now) {
+        usage.window30days = { count: 0, resetAt: now + 30 * 24 * 60 * 60 * 1000 };
+      }
+
+      // Increment all windows
+      usage.window15min.count++;
+      usage.window1hr.count++;
+      usage.window24hr.count++;
+      usage.window30days.count++;
+
+      // Save back to database
+      if (existing) {
+        await typedDb
+          .update(appSettingsTablePostgres)
+          .set({
+            value: JSON.stringify(usage),
+            updatedAt: new Date()
+          })
+          .where(eq(appSettingsTablePostgres.key, usageKey));
+      } else {
+        await typedDb
+          .insert(appSettingsTablePostgres)
+          .values({ key: usageKey, value: JSON.stringify(usage) });
+      }
+
+      logger.debug({ type, usage }, 'Tracked Twitter API usage (direct)');
+    }
   } catch (error) {
     logger.error({ error, type }, 'Failed to track usage directly');
   }

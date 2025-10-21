@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Heart, Repeat2, MessageCircle, Eye, ArrowUpDown, ChevronLeft, ChevronRight, Loader2, ExternalLink } from 'lucide-react';
+import { Heart, Repeat2, MessageCircle, Eye, ArrowUpDown, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import { NoRepliesState, LoadingState } from '@/components/ui/empty-state';
 
 interface TweetReply {
