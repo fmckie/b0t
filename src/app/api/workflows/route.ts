@@ -34,6 +34,7 @@ export async function GET() {
         createdAt: workflowsTablePostgres.createdAt,
         lastRun: workflowsTablePostgres.lastRun,
         lastRunStatus: workflowsTablePostgres.lastRunStatus,
+        lastRunOutput: workflowsTablePostgres.lastRunOutput,
         runCount: workflowsTablePostgres.runCount,
       })
       .from(workflowsTablePostgres)

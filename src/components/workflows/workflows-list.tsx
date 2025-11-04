@@ -9,7 +9,6 @@ interface WorkflowsListProps {
   loading: boolean;
   onWorkflowDeleted: () => void;
   onWorkflowExport: (id: string) => void;
-  onWorkflowRun: (id: string) => void;
   onWorkflowViewHistory: (id: string) => void;
   onWorkflowUpdated?: () => void;
 }
@@ -19,7 +18,6 @@ export function WorkflowsList({
   loading,
   onWorkflowDeleted,
   onWorkflowExport,
-  onWorkflowRun,
   onWorkflowViewHistory,
   onWorkflowUpdated,
 }: WorkflowsListProps) {
@@ -27,7 +25,44 @@ export function WorkflowsList({
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {[1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-48" />
+          <div
+            key={i}
+            className="rounded-lg border border-border/50 bg-surface/80 backdrop-blur-sm shadow-sm p-4 space-y-3"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between gap-2">
+              <Skeleton className="h-5 w-3/4" />
+              <div className="flex gap-1">
+                <Skeleton className="h-8 w-8 rounded-md" />
+                <Skeleton className="h-8 w-8 rounded-md" />
+              </div>
+            </div>
+
+            {/* Description */}
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-2/3" />
+
+            {/* Badges */}
+            <div className="flex gap-2">
+              <Skeleton className="h-5 w-16 rounded-full" />
+              <Skeleton className="h-5 w-16 rounded-full" />
+            </div>
+
+            {/* Stats */}
+            <div className="space-y-1">
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-3 w-1/2" />
+            </div>
+
+            {/* Buttons */}
+            <div className="flex gap-1">
+              <Skeleton className="h-7 w-16" />
+              <Skeleton className="h-7 w-20" />
+              <Skeleton className="h-7 w-24" />
+              <Skeleton className="h-7 w-16" />
+            </div>
+          </div>
         ))}
       </div>
     );
@@ -51,7 +86,6 @@ export function WorkflowsList({
           workflow={workflow}
           onDeleted={onWorkflowDeleted}
           onExport={onWorkflowExport}
-          onRun={onWorkflowRun}
           onViewHistory={onWorkflowViewHistory}
           onUpdated={onWorkflowUpdated}
         />

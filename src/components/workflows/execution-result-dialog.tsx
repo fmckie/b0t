@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { OutputRenderer } from './output-renderer';
 
 interface ExecutionResult {
   success: boolean;
@@ -98,13 +99,7 @@ export function ExecutionResultDialog({
           {result.success && result.output !== undefined && (
             <div className="space-y-2">
               <h3 className="text-sm font-semibold">Output</h3>
-              <div className="rounded-lg border border-border/50 bg-surface/50 p-3">
-                <pre className="text-xs overflow-x-auto">
-                  {typeof result.output === 'string'
-                    ? result.output
-                    : JSON.stringify(result.output, null, 2)}
-                </pre>
-              </div>
+              <OutputRenderer output={result.output} />
             </div>
           )}
         </div>

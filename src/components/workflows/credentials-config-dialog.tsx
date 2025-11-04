@@ -10,7 +10,6 @@ import {
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { WorkflowCredentialsStatus } from './workflow-credentials-status';
-import { Info } from 'lucide-react';
 
 interface CredentialsConfigDialogProps {
   workflowId: string;
@@ -65,23 +64,15 @@ export function CredentialsConfigDialog({
             <div className="space-y-2">
               <div className="text-xs font-medium text-muted-foreground">Required Credentials:</div>
               <div className="space-y-1.5">
-                <Skeleton className="h-10 w-full rounded-md animate-pulse" />
-                <Skeleton className="h-10 w-full rounded-md animate-pulse" />
-                <Skeleton className="h-10 w-full rounded-md animate-pulse" />
+                <Skeleton className="h-10 w-full rounded-md" />
+                <Skeleton className="h-10 w-full rounded-md" />
+                <Skeleton className="h-10 w-full rounded-md" />
               </div>
             </div>
           ) : hasCredentials === false ? (
-            <div className="rounded-lg border border-border/50 bg-muted/30 p-6 text-center transition-all duration-200 hover:bg-muted/40 hover:border-border">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-500/10 dark:bg-blue-500/20 mb-3 transition-transform duration-200 hover:scale-110">
-                <Info className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-              </div>
-              <h3 className="text-sm font-medium text-foreground mb-2">
-                No External Credentials Required
-              </h3>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                This workflow doesn&apos;t use any external APIs or services that require authentication.
-                If you add steps that connect to platforms like Twitter, OpenAI, or other services,
-                their credentials will appear here.
+            <div className="text-center py-12 border-2 border-dashed rounded-lg">
+              <p className="text-muted-foreground">
+                No external credentials required for this workflow.
               </p>
             </div>
           ) : (

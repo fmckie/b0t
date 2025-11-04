@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Clock, CheckCircle2, XCircle } from 'lucide-react';
+import { OutputRenderer } from './output-renderer';
 
 interface WorkflowRun {
   id: string;
@@ -140,11 +141,9 @@ export function ExecutionHistoryDialog({
                     <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
                       View output
                     </summary>
-                    <pre className="mt-2 p-2 rounded bg-muted overflow-x-auto">
-                      {typeof run.output === 'string'
-                        ? run.output
-                        : JSON.stringify(run.output, null, 2)}
-                    </pre>
+                    <div className="mt-2">
+                      <OutputRenderer output={run.output} />
+                    </div>
                   </details>
                 ) : null}
               </div>

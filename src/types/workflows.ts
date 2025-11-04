@@ -11,6 +11,7 @@ export interface WorkflowListItem {
   createdAt: Date | null;
   lastRun: Date | null;
   lastRunStatus: string | null;
+  lastRunOutput: unknown | null;
   runCount: number;
 }
 

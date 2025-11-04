@@ -168,6 +168,45 @@ Users create workflows by chatting with Claude. Claude generates the workflow JS
 - `{{feed.items[0].title}}` - Access nested properties/arrays
 - Steps with `outputAs` save results for later steps
 
+**Output Display Configuration:**
+The LLM can specify exactly how workflow outputs should be displayed by adding an `outputDisplay` field to the workflow config:
+
+```json
+{
+  "config": {
+    "steps": [...],
+    "outputDisplay": {
+      "type": "table",
+      "columns": [
+        { "key": "title", "label": "Video Title", "type": "text" },
+        { "key": "viewCount", "label": "Views", "type": "number" },
+        { "key": "channelTitle", "label": "Channel", "type": "text" }
+      ]
+    }
+  }
+}
+```
+
+**Display types:**
+- `table` - Tabular data with configurable columns
+- `list` - Simple list of items
+- `text` - Plain text output
+- `markdown` - Markdown formatted text
+- `json` - Raw JSON display
+- `image` - Single image
+- `images` - Image gallery
+
+**Column configuration (for tables):**
+- `key` - Field name from the data (supports nested paths like `author.username`)
+- `label` - Human-readable column header
+- `type` - Data type: `text`, `link`, `date`, `number`, `boolean`
+
+**When to use outputDisplay:**
+- User asks for specific columns only: "show me title and views"
+- User wants custom column labels: "call it 'Video Title' instead of 'title'"
+- User wants specific column order
+- If NOT specified, system auto-detects up to 8 columns from data
+
 **Workflow Configuration:**
 - Users can configure workflow settings via the unified Settings dialog
 - Settings are organized as collapsible FAQ-style sections:

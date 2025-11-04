@@ -4,27 +4,29 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Download, Trash2, Workflow as WorkflowIcon, Play, History, Key, MessageSquare, Webhook, Clock, Send, Sliders } from 'lucide-react';
+import { Download, Trash2, Workflow as WorkflowIcon, Play, Key, MessageSquare, Webhook, Clock, Send, Sliders, BarChart3, Table2, Image as ImageIcon, FileText, Braces, List } from 'lucide-react';
 import { WorkflowListItem } from '@/types/workflows';
 import { WorkflowExecutionDialog } from './workflow-execution-dialog';
 import { CredentialsConfigDialog } from './credentials-config-dialog';
 import { WorkflowSettingsDialog } from './workflow-settings-dialog';
+import { WorkflowOutputsDialog } from './workflow-outputs-dialog';
+import { detectOutputDisplay, getOutputTypeLabel, getOutputTypeIcon } from '@/lib/workflows/analyze-output-display';
 import { toast } from 'sonner';
 
 interface WorkflowCardProps {
   workflow: WorkflowListItem;
   onDeleted: () => void;
   onExport: (id: string) => void;
-  onRun: (id: string) => void;
   onViewHistory: (id: string) => void;
   onUpdated?: () => void;
 }
 
-export function WorkflowCard({ workflow, onDeleted, onExport, onRun, onViewHistory, onUpdated }: WorkflowCardProps) {
+export function WorkflowCard({ workflow, onDeleted, onExport, onViewHistory, onUpdated }: WorkflowCardProps) {
   const [deleting, setDeleting] = useState(false);
   const [executionDialogOpen, setExecutionDialogOpen] = useState(false);
   const [credentialsConfigOpen, setCredentialsConfigOpen] = useState(false);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
+  const [outputsDialogOpen, setOutputsDialogOpen] = useState(false);
 
   const handleDelete = async () => {
     toast(`Delete "${workflow.name}"?`, {
@@ -70,7 +72,9 @@ export function WorkflowCard({ workflow, onDeleted, onExport, onRun, onViewHisto
   };
 
   const handleExecuted = () => {
-    onRun(workflow.id); // Trigger refresh
+    // Just refresh the workflows list, don't execute again
+    // The dialog already handled the execution
+    onUpdated?.();
   };
 
   const formatDate = (date: Date | null) => {
@@ -127,6 +131,24 @@ export function WorkflowCard({ workflow, onDeleted, onExport, onRun, onViewHisto
   const runButtonConfig = getRunButtonConfig();
   const RunIcon = runButtonConfig.icon;
 
+  // Detect output type for badge
+  const outputDisplay = workflow.lastRunOutput
+    ? detectOutputDisplay('', workflow.lastRunOutput)
+    : null;
+  const outputTypeLabel = outputDisplay ? getOutputTypeLabel(outputDisplay.type) : null;
+  const outputIconName = outputDisplay ? getOutputTypeIcon(outputDisplay.type) : 'BarChart3';
+
+  // Map icon name to component
+  const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+    Table2,
+    Image: ImageIcon,
+    FileText,
+    BarChart3,
+    List,
+    Braces,
+  };
+  const OutputIcon = iconMap[outputIconName] || BarChart3;
+
   return (
     <Card className="group relative overflow-hidden rounded-lg border border-border/50 bg-surface/80 backdrop-blur-sm shadow-sm hover:shadow-lg hover:border-primary/30 transition-all duration-300 hover:scale-[1.02]">
       <CardHeader className="pb-3 pt-4">
@@ -171,6 +193,12 @@ export function WorkflowCard({ workflow, onDeleted, onExport, onRun, onViewHisto
           {workflow.lastRunStatus && (
             <Badge variant="secondary" className={getRunStatusColor(workflow.lastRunStatus)}>
               {workflow.lastRunStatus}
+            </Badge>
+          )}
+          {outputTypeLabel && (
+            <Badge variant="outline" className="gap-1">
+              <OutputIcon className="h-3 w-3" />
+              {outputTypeLabel}
             </Badge>
           )}
         </div>
@@ -224,12 +252,19 @@ export function WorkflowCard({ workflow, onDeleted, onExport, onRun, onViewHisto
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => onViewHistory(workflow.id)}
-            className="h-7 px-2 transition-all duration-200 hover:scale-105 active:scale-95 group"
-            title="View execution history"
+            onClick={() => setOutputsDialogOpen(true)}
+            disabled={!workflow.lastRun || workflow.lastRunStatus !== 'success'}
+            className="h-7 px-2 transition-all duration-200 hover:scale-105 active:scale-95 group disabled:opacity-50"
+            title={
+              !workflow.lastRun
+                ? 'No outputs yet'
+                : workflow.lastRunStatus !== 'success'
+                  ? 'Last run failed'
+                  : 'View workflow outputs'
+            }
           >
-            <History className="h-3.5 w-3.5 mr-1 transition-transform duration-200 group-hover:rotate-180" />
-            <span className="text-xs">History</span>
+            <BarChart3 className="h-3.5 w-3.5 mr-1 transition-transform duration-200 group-hover:scale-110" />
+            <span className="text-xs">Outputs</span>
           </Button>
         </div>
       </CardContent>
@@ -237,6 +272,7 @@ export function WorkflowCard({ workflow, onDeleted, onExport, onRun, onViewHisto
       <WorkflowExecutionDialog
         workflowId={workflow.id}
         workflowName={workflow.name}
+        workflowConfig={workflow.config}
         triggerType={workflow.trigger.type}
         triggerConfig={workflow.trigger.config}
         open={executionDialogOpen}
@@ -259,6 +295,14 @@ export function WorkflowCard({ workflow, onDeleted, onExport, onRun, onViewHisto
         open={settingsDialogOpen}
         onOpenChange={setSettingsDialogOpen}
         onUpdated={onUpdated}
+      />
+
+      <WorkflowOutputsDialog
+        workflowId={workflow.id}
+        workflowName={workflow.name}
+        workflowConfig={workflow.config}
+        open={outputsDialogOpen}
+        onOpenChange={setOutputsDialogOpen}
       />
     </Card>
   );

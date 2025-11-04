@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm';
 import { text, integer, sqliteTable, index as sqliteIndex, uniqueIndex as sqliteUniqueIndex } from 'drizzle-orm/sqlite-core';
-import { pgTable, serial, text as pgText, timestamp, varchar, integer as pgInteger, index as pgIndex, uniqueIndex as pgUniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text as pgText, timestamp, varchar, integer as pgInteger, index as pgIndex, uniqueIndex as pgUniqueIndex, jsonb as pgJsonb } from 'drizzle-orm/pg-core';
 
 // Determine which database to use based on environment
 const useSQLite = !process.env.DATABASE_URL;
@@ -230,6 +230,7 @@ export const workflowsTableSQLite = sqliteTable('workflows', {
   lastRun: integer('last_run', { mode: 'timestamp' }),
   lastRunStatus: text('last_run_status'),
   lastRunError: text('last_run_error'),
+  lastRunOutput: text('last_run_output', { mode: 'json' }),
   runCount: integer('run_count').notNull().default(0),
 }, (table) => ({
   userIdIdx: sqliteIndex('workflows_user_id_idx').on(table.userId),
@@ -263,6 +264,7 @@ export const workflowsTablePostgres = pgTable('workflows', {
   lastRun: timestamp('last_run'),
   lastRunStatus: varchar('last_run_status', { length: 50 }),
   lastRunError: pgText('last_run_error'),
+  lastRunOutput: pgJsonb('last_run_output'),
   runCount: pgInteger('run_count').notNull().default(0),
 }, (table) => ({
   userIdIdx: pgIndex('workflows_user_id_idx').on(table.userId),

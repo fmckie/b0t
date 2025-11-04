@@ -57,7 +57,14 @@ Based on the user's request, create a workflow export format:
         inputs: { param: "value" },
         outputAs: "variableName" // Optional: save output for next steps
       }
-    ]
+    ],
+    // OPTIONAL: Control how the output is displayed
+    outputDisplay: {
+      type: "table" | "list" | "text" | "markdown" | "json" | "image" | "images",
+      columns: [ // Only for type: "table"
+        { key: "fieldName", label: "Column Header", type: "text" | "link" | "date" | "number" | "boolean" }
+      ]
+    }
   },
   metadata: {
     author: "b0t AI",
@@ -75,6 +82,156 @@ Based on the user's request, create a workflow export format:
 - Each step's inputs are passed as positional arguments to the function
 - `version` field is required (use "1.0")
 - `metadata.requiresCredentials` lists which API keys the user needs to configure
+
+**OUTPUT DISPLAY CONFIGURATION:**
+
+The `outputDisplay` field controls how workflow results are shown to users. This is OPTIONAL - if not specified, the system auto-detects the best display format.
+
+**When to use outputDisplay:**
+1. **User asks for specific columns**: "show me only title and views"
+2. **User wants custom labels**: "call it 'Video Title' instead of 'title'"
+3. **User wants specific column order**: "show views first, then title"
+4. **User specifies display format**: "show as a list" or "show as markdown"
+
+**Display Types:**
+
+1. **`table`** - Tabular data (most common for APIs, databases, RSS feeds)
+   ```json
+   {
+     "type": "table",
+     "columns": [
+       { "key": "title", "label": "Video Title", "type": "text" },
+       { "key": "viewCount", "label": "Views", "type": "number" },
+       { "key": "url", "label": "Link", "type": "link" },
+       { "key": "publishedAt", "label": "Published", "type": "date" }
+     ]
+   }
+   ```
+   - `key`: Field name from the data (supports nested paths like `author.username`)
+   - `label`: Human-readable column header
+   - `type`: `text`, `link`, `date`, `number`, `boolean`
+   - **Auto-detection**: If not specified, shows up to 8 columns from data
+
+2. **`list`** - Simple bullet list (for arrays of strings/simple values)
+   ```json
+   { "type": "list" }
+   ```
+   Example use: Tag lists, category names, simple arrays
+
+3. **`text`** - Plain text (for short text outputs)
+   ```json
+   { "type": "text" }
+   ```
+   Example use: Single values, summaries, status messages
+
+4. **`markdown`** - Formatted text (for AI-generated content, rich text)
+   ```json
+   { "type": "markdown" }
+   ```
+   Example use: AI-generated blog posts, formatted documents, README content
+
+5. **`json`** - Raw JSON display (for debugging, complex nested objects)
+   ```json
+   { "type": "json" }
+   ```
+   Example use: API responses, debugging, complex nested data
+
+6. **`image`** - Single image (for image generation, screenshots)
+   ```json
+   {
+     "type": "image",
+     "config": { "urlKey": "url" }
+   }
+   ```
+   Example use: DALL-E generated images, screenshots, single photos
+
+7. **`images`** - Image gallery (for multiple images)
+   ```json
+   { "type": "images" }
+   ```
+   Example use: Multiple AI-generated images, photo collections
+
+**Examples by use case:**
+
+**YouTube videos with specific columns:**
+```json
+{
+  "config": {
+    "steps": [...],
+    "outputDisplay": {
+      "type": "table",
+      "columns": [
+        { "key": "title", "label": "Video Title", "type": "text" },
+        { "key": "viewCount", "label": "Views", "type": "number" },
+        { "key": "channelTitle", "label": "Channel", "type": "text" }
+      ]
+    }
+  }
+}
+```
+
+**RSS feed with custom order:**
+```json
+{
+  "config": {
+    "steps": [...],
+    "outputDisplay": {
+      "type": "table",
+      "columns": [
+        { "key": "pubDate", "label": "Published", "type": "date" },
+        { "key": "title", "label": "Article", "type": "text" },
+        { "key": "link", "label": "Read More", "type": "link" }
+      ]
+    }
+  }
+}
+```
+
+**AI-generated blog post:**
+```json
+{
+  "config": {
+    "steps": [...],
+    "outputDisplay": {
+      "type": "markdown"
+    }
+  }
+}
+```
+
+**Image generation:**
+```json
+{
+  "config": {
+    "steps": [...],
+    "outputDisplay": {
+      "type": "image",
+      "config": { "urlKey": "url" }
+    }
+  }
+}
+```
+
+**Simple status or count:**
+```json
+{
+  "config": {
+    "steps": [...],
+    "outputDisplay": {
+      "type": "text"
+    }
+  }
+}
+```
+
+**If user doesn't specify output format:**
+- System auto-detects based on data structure
+- Arrays of objects → table (up to 8 columns)
+- Single object → table (key-value pairs)
+- Long text with markdown syntax → markdown
+- Image URLs → image display
+- Arrays of strings → list
+- Everything else → json
 
 **Step 3: Validate and import workflow**
 

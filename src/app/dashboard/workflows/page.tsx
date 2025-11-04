@@ -5,7 +5,6 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Upload, Search, Workflow, CheckCircle2, XCircle } from 'lucide-react';
 import { WorkflowsList } from '@/components/workflows/workflows-list';
-import { ExecutionResultDialog } from '@/components/workflows/execution-result-dialog';
 import { ExecutionHistoryDialog } from '@/components/workflows/execution-history-dialog';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -31,15 +30,6 @@ export default function WorkflowsPage() {
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [executionResult, setExecutionResult] = useState<{
-    success: boolean;
-    output?: unknown;
-    error?: string;
-    errorStep?: string;
-    duration?: number;
-  } | null>(null);
-  const [showResultDialog, setShowResultDialog] = useState(false);
-  const [executedWorkflowName, setExecutedWorkflowName] = useState('');
   const [showHistoryDialog, setShowHistoryDialog] = useState(false);
   const [historyWorkflowId, setHistoryWorkflowId] = useState('');
   const [historyWorkflowName, setHistoryWorkflowName] = useState('');
@@ -62,50 +52,6 @@ export default function WorkflowsPage() {
 
   const handleWorkflowDeleted = () => {
     fetchWorkflows();
-  };
-
-  const handleWorkflowRun = async (id: string) => {
-    const workflow = workflows.find((w) => w.id === id);
-    if (!workflow) return;
-
-    const startTime = Date.now();
-
-    try {
-      const response = await fetch(`/api/workflows/${id}/run`, {
-        method: 'POST',
-      });
-
-      const duration = Date.now() - startTime;
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to run workflow');
-      }
-
-      const result = await response.json();
-
-      // Show result in dialog
-      setExecutionResult({
-        ...result,
-        duration,
-      });
-      setExecutedWorkflowName(workflow.name);
-      setShowResultDialog(true);
-
-      // Refresh to update last run status
-      fetchWorkflows();
-    } catch (error) {
-      console.error('Failed to run workflow:', error);
-
-      // Show error in dialog
-      setExecutionResult({
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-        duration: Date.now() - startTime,
-      });
-      setExecutedWorkflowName(workflow.name);
-      setShowResultDialog(true);
-    }
   };
 
   const handleWorkflowExport = async (id: string) => {
@@ -347,7 +293,6 @@ export default function WorkflowsPage() {
           loading={loading}
           onWorkflowDeleted={handleWorkflowDeleted}
           onWorkflowExport={handleWorkflowExport}
-          onWorkflowRun={handleWorkflowRun}
           onWorkflowViewHistory={handleViewHistory}
           onWorkflowUpdated={fetchWorkflows}
         />
@@ -392,13 +337,6 @@ export default function WorkflowsPage() {
             </div>
           </DialogContent>
         </Dialog>
-
-        <ExecutionResultDialog
-          open={showResultDialog}
-          onOpenChange={setShowResultDialog}
-          result={executionResult}
-          workflowName={executedWorkflowName}
-        />
 
         <ExecutionHistoryDialog
           open={showHistoryDialog}
