@@ -11,8 +11,8 @@
  *   npx tsx scripts/list-workflows.ts --status active --trigger cron
  */
 
-import { postgresDb } from '../src/lib/db';
-import { workflowsTablePostgres } from '../src/lib/schema';
+import { db } from '../src/lib/db';
+import { workflowsTable } from '../src/lib/schema';
 import { eq, and } from 'drizzle-orm';
 
 interface ListOptions {
@@ -21,29 +21,24 @@ interface ListOptions {
 }
 
 async function listWorkflows(options: ListOptions = {}): Promise<void> {
-  if (!postgresDb) {
-    console.error('❌ Database not initialized');
-    process.exit(1);
-  }
-
   try {
     // Build query conditions
     const conditions = [];
     if (options.status) {
-      conditions.push(eq(workflowsTablePostgres.status, options.status));
+      conditions.push(eq(workflowsTable.status, options.status));
     }
 
     // Fetch workflows
     const workflows = conditions.length > 0
-      ? await postgresDb
+      ? await db
           .select()
-          .from(workflowsTablePostgres)
+          .from(workflowsTable)
           .where(and(...conditions))
-          .orderBy(workflowsTablePostgres.createdAt)
-      : await postgresDb
+          .orderBy(workflowsTable.createdAt)
+      : await db
           .select()
-          .from(workflowsTablePostgres)
-          .orderBy(workflowsTablePostgres.createdAt);
+          .from(workflowsTable)
+          .orderBy(workflowsTable.createdAt);
 
     // Filter by trigger type if specified (can't use SQL because trigger is JSONB)
     let filteredWorkflows = workflows;

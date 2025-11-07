@@ -10,24 +10,19 @@
  *   npx tsx scripts/export-workflow.ts abc123 my-workflow.json
  */
 
-import { postgresDb } from '../src/lib/db';
-import { workflowsTablePostgres } from '../src/lib/schema';
+import { db } from '../src/lib/db';
+import { workflowsTable } from '../src/lib/schema';
 import { eq } from 'drizzle-orm';
 import { writeFileSync } from 'fs';
 import { resolve } from 'path';
 
 async function exportWorkflow(workflowId: string, outputFile?: string): Promise<void> {
-  if (!postgresDb) {
-    console.error('❌ Database not initialized');
-    process.exit(1);
-  }
-
   try {
     // Fetch workflow
-    const workflows = await postgresDb
+    const workflows = await db
       .select()
-      .from(workflowsTablePostgres)
-      .where(eq(workflowsTablePostgres.id, workflowId))
+      .from(workflowsTable)
+      .where(eq(workflowsTable.id, workflowId))
       .limit(1);
 
     if (workflows.length === 0) {

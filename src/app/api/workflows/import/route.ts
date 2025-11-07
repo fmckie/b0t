@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { postgresDb } from '@/lib/db';
-import { workflowsTablePostgres } from '@/lib/schema';
+import { db } from '@/lib/db';
+import { workflowsTable } from '@/lib/schema';
 import { importWorkflow } from '@/lib/workflows/import-export';
 import { randomUUID } from 'crypto';
 import { logger } from '@/lib/logger';
@@ -44,14 +44,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!postgresDb) {
-      throw new Error('Database not initialized');
-    }
-
     // Create workflow in database
     const id = randomUUID();
 
-    await postgresDb.insert(workflowsTablePostgres).values({
+    await db.insert(workflowsTable).values({
       id,
       userId: session.user.id,
       organizationId: null,

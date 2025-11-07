@@ -1,5 +1,5 @@
-import { postgresDb } from '@/lib/db';
-import { userCredentialsTablePostgres } from '@/lib/schema';
+import { db } from '@/lib/db';
+import { userCredentialsTable } from '@/lib/schema';
 import { encrypt, decrypt } from '@/lib/encryption';
 import { eq, and, isNull } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
@@ -31,10 +31,6 @@ export async function storeCredential(
 ): Promise<{ id: string }> {
   logger.info({ userId, platform: input.platform, type: input.type }, 'Storing credential');
 
-  if (!postgresDb) {
-    throw new Error('Database not initialized');
-  }
-
   const id = randomUUID();
   let encryptedValue = '';
   let metadata = input.metadata || {};
@@ -55,7 +51,7 @@ export async function storeCredential(
     };
   }
 
-  await postgresDb.insert(userCredentialsTablePostgres).values({
+  await db.insert(userCredentialsTable).values({
     id,
     userId,
     organizationId: organizationId || undefined,
@@ -80,17 +76,13 @@ export async function getCredential(
 ): Promise<string | null> {
   logger.info({ userId, platform }, 'Retrieving credential');
 
-  if (!postgresDb) {
-    throw new Error('Database not initialized');
-  }
-
-  const credentials = await postgresDb
+  const credentials = await db
     .select()
-    .from(userCredentialsTablePostgres)
+    .from(userCredentialsTable)
     .where(
       and(
-        eq(userCredentialsTablePostgres.userId, userId),
-        eq(userCredentialsTablePostgres.platform, platform.toLowerCase())
+        eq(userCredentialsTable.userId, userId),
+        eq(userCredentialsTable.platform, platform.toLowerCase())
       )
     )
     .limit(1);
@@ -103,10 +95,10 @@ export async function getCredential(
   const credential = credentials[0];
 
   // Update last used timestamp
-  await postgresDb
-    .update(userCredentialsTablePostgres)
+  await db
+    .update(userCredentialsTable)
     .set({ lastUsed: new Date() })
-    .where(eq(userCredentialsTablePostgres.id, credential.id));
+    .where(eq(userCredentialsTable.id, credential.id));
 
   const decryptedValue = decrypt(credential.encryptedValue);
 
@@ -131,31 +123,27 @@ export async function listCredentials(
     lastUsed: Date | null;
   }>
 > {
-  if (!postgresDb) {
-    throw new Error('Database not initialized');
-  }
-
   // Build where clause
-  const whereConditions = [eq(userCredentialsTablePostgres.userId, userId)];
+  const whereConditions = [eq(userCredentialsTable.userId, userId)];
 
   if (organizationId) {
     // Filter by specific organization
-    whereConditions.push(eq(userCredentialsTablePostgres.organizationId, organizationId));
+    whereConditions.push(eq(userCredentialsTable.organizationId, organizationId));
   } else {
     // Show only admin's personal credentials (not tied to any organization)
-    whereConditions.push(isNull(userCredentialsTablePostgres.organizationId));
+    whereConditions.push(isNull(userCredentialsTable.organizationId));
   }
 
-  const credentials = await postgresDb
+  const credentials = await db
     .select({
-      id: userCredentialsTablePostgres.id,
-      platform: userCredentialsTablePostgres.platform,
-      name: userCredentialsTablePostgres.name,
-      type: userCredentialsTablePostgres.type,
-      createdAt: userCredentialsTablePostgres.createdAt,
-      lastUsed: userCredentialsTablePostgres.lastUsed,
+      id: userCredentialsTable.id,
+      platform: userCredentialsTable.platform,
+      name: userCredentialsTable.name,
+      type: userCredentialsTable.type,
+      createdAt: userCredentialsTable.createdAt,
+      lastUsed: userCredentialsTable.lastUsed,
     })
-    .from(userCredentialsTablePostgres)
+    .from(userCredentialsTable)
     .where(and(...whereConditions));
 
   return credentials;
@@ -167,16 +155,12 @@ export async function listCredentials(
 export async function deleteCredential(userId: string, credentialId: string): Promise<void> {
   logger.info({ userId, credentialId }, 'Deleting credential');
 
-  if (!postgresDb) {
-    throw new Error('Database not initialized');
-  }
-
-  await postgresDb
-    .delete(userCredentialsTablePostgres)
+  await db
+    .delete(userCredentialsTable)
     .where(
       and(
-        eq(userCredentialsTablePostgres.id, credentialId),
-        eq(userCredentialsTablePostgres.userId, userId)
+        eq(userCredentialsTable.id, credentialId),
+        eq(userCredentialsTable.userId, userId)
       )
     );
 
@@ -193,19 +177,15 @@ export async function updateCredential(
 ): Promise<void> {
   logger.info({ userId, credentialId }, 'Updating credential');
 
-  if (!postgresDb) {
-    throw new Error('Database not initialized');
-  }
-
   const encryptedValue = encrypt(newValue);
 
-  await postgresDb
-    .update(userCredentialsTablePostgres)
+  await db
+    .update(userCredentialsTable)
     .set({ encryptedValue })
     .where(
       and(
-        eq(userCredentialsTablePostgres.id, credentialId),
-        eq(userCredentialsTablePostgres.userId, userId)
+        eq(userCredentialsTable.id, credentialId),
+        eq(userCredentialsTable.userId, userId)
       )
     );
 
@@ -223,25 +203,21 @@ export async function getCredentialFields(
 ): Promise<Record<string, string> | null> {
   logger.info({ userId, platform, organizationId }, 'Retrieving credential fields');
 
-  if (!postgresDb) {
-    throw new Error('Database not initialized');
-  }
-
   // Build where clause
   const whereConditions = [
-    eq(userCredentialsTablePostgres.userId, userId),
-    eq(userCredentialsTablePostgres.platform, platform.toLowerCase())
+    eq(userCredentialsTable.userId, userId),
+    eq(userCredentialsTable.platform, platform.toLowerCase())
   ];
 
   if (organizationId) {
-    whereConditions.push(eq(userCredentialsTablePostgres.organizationId, organizationId));
+    whereConditions.push(eq(userCredentialsTable.organizationId, organizationId));
   } else {
-    whereConditions.push(isNull(userCredentialsTablePostgres.organizationId));
+    whereConditions.push(isNull(userCredentialsTable.organizationId));
   }
 
-  const credentials = await postgresDb
+  const credentials = await db
     .select()
-    .from(userCredentialsTablePostgres)
+    .from(userCredentialsTable)
     .where(and(...whereConditions))
     .limit(1);
 
@@ -253,10 +229,10 @@ export async function getCredentialFields(
   const credential = credentials[0];
 
   // Update last used timestamp
-  await postgresDb
-    .update(userCredentialsTablePostgres)
+  await db
+    .update(userCredentialsTable)
     .set({ lastUsed: new Date() })
-    .where(eq(userCredentialsTablePostgres.id, credential.id));
+    .where(eq(userCredentialsTable.id, credential.id));
 
   // Check if multi-field credential
   if (credential.metadata && typeof credential.metadata === 'object' && 'fields' in credential.metadata) {
@@ -290,24 +266,20 @@ export async function hasCredential(
   platform: string,
   organizationId?: string
 ): Promise<boolean> {
-  if (!postgresDb) {
-    throw new Error('Database not initialized');
-  }
-
   const whereConditions = [
-    eq(userCredentialsTablePostgres.userId, userId),
-    eq(userCredentialsTablePostgres.platform, platform.toLowerCase())
+    eq(userCredentialsTable.userId, userId),
+    eq(userCredentialsTable.platform, platform.toLowerCase())
   ];
 
   if (organizationId) {
-    whereConditions.push(eq(userCredentialsTablePostgres.organizationId, organizationId));
+    whereConditions.push(eq(userCredentialsTable.organizationId, organizationId));
   } else {
-    whereConditions.push(isNull(userCredentialsTablePostgres.organizationId));
+    whereConditions.push(isNull(userCredentialsTable.organizationId));
   }
 
-  const credentials = await postgresDb
-    .select({ id: userCredentialsTablePostgres.id })
-    .from(userCredentialsTablePostgres)
+  const credentials = await db
+    .select({ id: userCredentialsTable.id })
+    .from(userCredentialsTable)
     .where(and(...whereConditions))
     .limit(1);
 

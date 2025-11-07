@@ -1,53 +1,17 @@
-import { drizzle as drizzleSQLite } from 'drizzle-orm/better-sqlite3';
-import { drizzle as drizzlePostgres } from 'drizzle-orm/node-postgres';
-import Database from 'better-sqlite3';
+import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 
-// Determine which database to use based on environment
+// PostgreSQL configuration
 const databaseUrl = process.env.DATABASE_URL;
 
-// Log for debugging
-if (databaseUrl) {
-  console.log('🗄️  DATABASE_URL detected:', databaseUrl.substring(0, 30) + '...');
-} else {
-  console.log('⚠️  DATABASE_URL not set - falling back to SQLite');
+if (!databaseUrl) {
+  throw new Error('DATABASE_URL environment variable is required. Make sure Docker PostgreSQL is running.');
 }
 
-// Always use PostgreSQL when DATABASE_URL is set
-// Only fallback to SQLite during build time when no DATABASE_URL is available
-const useSQLite = !databaseUrl;
+console.log('🗄️  Using PostgreSQL database:', databaseUrl.substring(0, 30) + '...');
 
-let db: ReturnType<typeof drizzleSQLite> | ReturnType<typeof drizzlePostgres>;
-let sqliteDb: ReturnType<typeof drizzleSQLite> | null = null;
-let postgresDb: ReturnType<typeof drizzlePostgres> | null = null;
-let sqliteClient: Database.Database | null = null;
+const pool = new Pool({
+  connectionString: databaseUrl,
+});
 
-if (useSQLite) {
-  // SQLite configuration for local development
-  console.log('🗄️  Using SQLite database for local development');
-  const sqlite = new Database('data/local.db');
-
-  // Enable WAL mode for better concurrency during builds
-  // Prevents database locking when multiple processes (dev server, build, typechecking) access the DB
-  sqlite.pragma('journal_mode = WAL');
-
-  // Set busy timeout to 5 seconds to handle concurrent access
-  sqlite.pragma('busy_timeout = 5000');
-
-  sqliteClient = sqlite;
-  sqliteDb = drizzleSQLite(sqlite);
-  db = sqliteDb;
-} else {
-  // PostgreSQL configuration for production (Railway)
-  console.log('🗄️  Using PostgreSQL database');
-  if (!databaseUrl) {
-    throw new Error('DATABASE_URL environment variable is required for production');
-  }
-  const pool = new Pool({
-    connectionString: databaseUrl,
-  });
-  postgresDb = drizzlePostgres(pool);
-  db = postgresDb;
-}
-
-export { db, useSQLite, sqliteDb, postgresDb, sqliteClient };
+export const db = drizzle(pool);

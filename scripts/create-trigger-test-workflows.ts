@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 
-import { sqliteDb } from '../src/lib/db';
-import { workflowsTableSQLite } from '../src/lib/schema';
+import { db } from '../src/lib/db';
+import { workflowsTable } from '../src/lib/schema';
 import { eq } from 'drizzle-orm';
 
 const workflows = [
@@ -202,32 +202,34 @@ const workflows = [
 async function main() {
   console.log('Creating test workflows for trigger configurations...\n');
 
-  if (!sqliteDb) {
-    throw new Error('Database not initialized');
-  }
-
   for (const workflow of workflows) {
     try {
       // Try to update first
-      const result = await sqliteDb
-        .update(workflowsTableSQLite)
-        .set({
-          config: workflow.config,
-          trigger: workflow.trigger,
-          name: workflow.name,
-          description: workflow.description,
-        })
-        .where(eq(workflowsTableSQLite.id, workflow.id));
+      const existing = await db
+        .select()
+        .from(workflowsTable)
+        .where(eq(workflowsTable.id, workflow.id))
+        .limit(1);
 
-      if (result.changes === 0) {
-        // If no rows updated, insert new
-        await sqliteDb.insert(workflowsTableSQLite).values({
+      if (existing.length > 0) {
+        // Update existing workflow
+        await db
+          .update(workflowsTable)
+          .set({
+            config: workflow.config,
+            trigger: workflow.trigger,
+            name: workflow.name,
+            description: workflow.description,
+          })
+          .where(eq(workflowsTable.id, workflow.id));
+        console.log(`✅ Updated: ${workflow.name} (${workflow.id})`);
+      } else {
+        // Insert new workflow
+        await db.insert(workflowsTable).values({
           ...workflow,
           createdAt: new Date(),
         });
         console.log(`✅ Created: ${workflow.name} (${workflow.id})`);
-      } else {
-        console.log(`✅ Updated: ${workflow.name} (${workflow.id})`);
       }
     } catch (error) {
       console.error(`❌ Failed to create/update ${workflow.id}:`, error);

@@ -9,8 +9,8 @@
  *   npx tsx scripts/clone-workflow.ts <workflow-id> --name "New Name" --description "New description"
  */
 
-import { postgresDb } from '../src/lib/db';
-import { workflowsTablePostgres } from '../src/lib/schema';
+import { db } from '../src/lib/db';
+import { workflowsTable } from '../src/lib/schema';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 
@@ -20,17 +20,12 @@ interface CloneOptions {
 }
 
 async function cloneWorkflow(workflowId: string, options: CloneOptions): Promise<void> {
-  if (!postgresDb) {
-    console.error('❌ Database not initialized');
-    process.exit(1);
-  }
-
   try {
     // Fetch existing workflow
-    const workflows = await postgresDb
+    const workflows = await db
       .select()
-      .from(workflowsTablePostgres)
-      .where(eq(workflowsTablePostgres.id, workflowId))
+      .from(workflowsTable)
+      .where(eq(workflowsTable.id, workflowId))
       .limit(1);
 
     if (workflows.length === 0) {
@@ -46,7 +41,7 @@ async function cloneWorkflow(workflowId: string, options: CloneOptions): Promise
     const newName = options.name;
     const newDescription = options.description || `Copy of ${originalWorkflow.description || originalWorkflow.name}`;
 
-    await postgresDb.insert(workflowsTablePostgres).values({
+    await db.insert(workflowsTable).values({
       id: newId,
       userId: originalWorkflow.userId,
       organizationId: originalWorkflow.organizationId,

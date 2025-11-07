@@ -2,8 +2,8 @@ import { NextRequest } from 'next/server';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { streamText } from 'ai';
-import { postgresDb } from '@/lib/db';
-import { workflowsTablePostgres } from '@/lib/schema';
+import { db } from '@/lib/db';
+import { workflowsTable } from '@/lib/schema';
 import { eq } from 'drizzle-orm';
 import { executeWorkflowConfig } from '@/lib/workflows/executor';
 import { logger } from '@/lib/logger';
@@ -27,17 +27,13 @@ export async function POST(
   try {
     const { messages } = await request.json();
 
-    if (!postgresDb) {
-      throw new Error('Database not initialized');
-    }
-
     logger.info({ workflowId }, 'Chat request received');
 
     // Fetch workflow
-    const workflows = await postgresDb
+    const workflows = await db
       .select()
-      .from(workflowsTablePostgres)
-      .where(eq(workflowsTablePostgres.id, workflowId))
+      .from(workflowsTable)
+      .where(eq(workflowsTable.id, workflowId))
       .limit(1);
 
     if (workflows.length === 0) {

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { useSQLite, sqliteDb, postgresDb } from '@/lib/db';
-import { accountsTableSQLite, accountsTablePostgres } from '@/lib/schema';
+import { db } from '@/lib/db';
+import { accountsTable } from '@/lib/schema';
 import { logger } from '@/lib/logger';
 import { eq, and } from 'drizzle-orm';
 
@@ -24,32 +24,16 @@ export async function GET() {
     }
 
     // Look up YouTube account in accounts table
-    let youtubeAccount;
-    if (useSQLite) {
-      if (!sqliteDb) throw new Error('SQLite database not initialized');
-      [youtubeAccount] = await sqliteDb
-        .select()
-        .from(accountsTableSQLite)
-        .where(
-          and(
-            eq(accountsTableSQLite.userId, session.user.id),
-            eq(accountsTableSQLite.provider, 'youtube')
-          )
+    const [youtubeAccount] = await db
+      .select()
+      .from(accountsTable)
+      .where(
+        and(
+          eq(accountsTable.userId, session.user.id),
+          eq(accountsTable.provider, 'youtube')
         )
-        .limit(1);
-    } else {
-      if (!postgresDb) throw new Error('PostgreSQL database not initialized');
-      [youtubeAccount] = await postgresDb
-        .select()
-        .from(accountsTablePostgres)
-        .where(
-          and(
-            eq(accountsTablePostgres.userId, session.user.id),
-            eq(accountsTablePostgres.provider, 'youtube')
-          )
-        )
-        .limit(1);
-    }
+      )
+      .limit(1);
 
     if (!youtubeAccount) {
       return NextResponse.json({
@@ -92,27 +76,14 @@ export async function DELETE() {
     }
 
     // Delete YouTube account from database
-    if (useSQLite) {
-      if (!sqliteDb) throw new Error('SQLite database not initialized');
-      await sqliteDb
-        .delete(accountsTableSQLite)
-        .where(
-          and(
-            eq(accountsTableSQLite.userId, session.user.id),
-            eq(accountsTableSQLite.provider, 'youtube')
-          )
-        );
-    } else {
-      if (!postgresDb) throw new Error('PostgreSQL database not initialized');
-      await postgresDb
-        .delete(accountsTablePostgres)
-        .where(
-          and(
-            eq(accountsTablePostgres.userId, session.user.id),
-            eq(accountsTablePostgres.provider, 'youtube')
-          )
-        );
-    }
+    await db
+      .delete(accountsTable)
+      .where(
+        and(
+          eq(accountsTable.userId, session.user.id),
+          eq(accountsTable.provider, 'youtube')
+        )
+      );
 
     logger.info({ userId: session.user.id }, 'YouTube account disconnected');
 

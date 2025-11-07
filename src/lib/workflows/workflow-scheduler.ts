@@ -1,6 +1,6 @@
 import cron, { ScheduledTask } from 'node-cron';
-import { useSQLite, sqliteDb, postgresDb } from '@/lib/db';
-import { workflowsTableSQLite, workflowsTablePostgres } from '@/lib/schema';
+import { db } from '@/lib/db';
+import { workflowsTable } from '@/lib/schema';
 import { sql } from 'drizzle-orm';
 import { logger } from '@/lib/logger';
 import { queueWorkflowExecution, isWorkflowQueueAvailable } from './workflow-queue';
@@ -60,63 +60,33 @@ class WorkflowScheduler {
    */
   async syncWorkflows() {
     try {
-
-      let workflows: Array<{
-        id: string;
-        name: string;
-        userId: string;
-        trigger: unknown;
-        status: string;
-      }> = [];
-
-      // Get all active workflows with cron triggers based on database type
-      if (useSQLite && sqliteDb) {
-        workflows = await sqliteDb
-          .select({
-            id: workflowsTableSQLite.id,
-            name: workflowsTableSQLite.name,
-            userId: workflowsTableSQLite.userId,
-            trigger: workflowsTableSQLite.trigger,
-            status: workflowsTableSQLite.status,
-          })
-          .from(workflowsTableSQLite)
-          .where(
-            sql`
-              ${workflowsTableSQLite.status} = 'active' AND
-              json_extract(${workflowsTableSQLite.trigger}, '$.type') = 'cron'
-            `
-          );
-      } else if (postgresDb) {
-        workflows = await postgresDb
-          .select({
-            id: workflowsTablePostgres.id,
-            name: workflowsTablePostgres.name,
-            userId: workflowsTablePostgres.userId,
-            trigger: workflowsTablePostgres.trigger,
-            status: workflowsTablePostgres.status,
-          })
-          .from(workflowsTablePostgres)
-          .where(
-            sql`
-              ${workflowsTablePostgres.status} = 'active' AND
-              ${workflowsTablePostgres.trigger}->>'type' = 'cron'
-            `
-          );
-      } else {
-        logger.warn('No database connection available - cannot sync workflows');
-        return;
-      }
+      // Get all active workflows with cron triggers
+      const activeWorkflows = await db
+        .select({
+          id: workflowsTable.id,
+          name: workflowsTable.name,
+          userId: workflowsTable.userId,
+          trigger: workflowsTable.trigger,
+          status: workflowsTable.status,
+        })
+        .from(workflowsTable)
+        .where(
+          sql`
+            ${workflowsTable.status} = 'active' AND
+            ${workflowsTable.trigger}->>'type' = 'cron'
+          `
+        );
 
       // Remove workflows that no longer exist or are inactive
       for (const [workflowId] of this.scheduledWorkflows) {
-        const stillExists = workflows.some((w) => w.id === workflowId);
+        const stillExists = activeWorkflows.some((w) => w.id === workflowId);
         if (!stillExists) {
           this.unscheduleWorkflow(workflowId);
         }
       }
 
       // Schedule new/updated workflows
-      for (const workflow of workflows) {
+      for (const workflow of activeWorkflows) {
         const trigger = workflow.trigger as {
           type: string;
           config: { schedule?: string };

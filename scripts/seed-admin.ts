@@ -10,8 +10,8 @@
  */
 
 import bcrypt from 'bcryptjs';
-import { postgresDb } from '../src/lib/db';
-import { usersTablePostgres } from '../src/lib/schema';
+import { db } from '../src/lib/db';
+import { usersTable } from '../src/lib/schema';
 import { eq } from 'drizzle-orm';
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@socialcat.com';
@@ -21,24 +21,19 @@ const ADMIN_USER_ID = '1';
 async function seedAdmin() {
   console.log('🌱 Seeding admin user...');
 
-  if (!postgresDb) {
-    console.error('❌ PostgreSQL database not initialized');
-    process.exit(1);
-  }
-
   try {
     // Check if admin user already exists
-    const existingUser = await postgresDb
+    const existingUser = await db
       .select()
-      .from(usersTablePostgres)
-      .where(eq(usersTablePostgres.id, ADMIN_USER_ID))
+      .from(usersTable)
+      .where(eq(usersTable.id, ADMIN_USER_ID))
       .limit(1);
 
     if (existingUser.length === 0) {
       // Create admin user
       const hashedPassword = await bcrypt.hash(ADMIN_PASSWORD, 10);
 
-      await postgresDb.insert(usersTablePostgres).values({
+      await db.insert(usersTable).values({
         id: ADMIN_USER_ID,
         email: ADMIN_EMAIL,
         password: hashedPassword,

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { TwitterApi } from 'twitter-api-v2';
-import { useSQLite, sqliteDb, postgresDb } from '@/lib/db';
-import { oauthStateTableSQLite, oauthStateTablePostgres, accountsTableSQLite, accountsTablePostgres } from '@/lib/schema';
+import { db } from '@/lib/db';
+import { oauthStateTable, accountsTable } from '@/lib/schema';
 import { logger } from '@/lib/logger';
 import { eq, and } from 'drizzle-orm';
 import { encrypt } from '@/lib/encryption';
@@ -76,22 +76,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Look up OAuth state in database
-    let oauthState;
-    if (useSQLite) {
-      if (!sqliteDb) throw new Error('SQLite database not initialized');
-      [oauthState] = await sqliteDb
-        .select()
-        .from(oauthStateTableSQLite)
-        .where(eq(oauthStateTableSQLite.state, state))
-        .limit(1);
-    } else {
-      if (!postgresDb) throw new Error('PostgreSQL database not initialized');
-      [oauthState] = await postgresDb
-        .select()
-        .from(oauthStateTablePostgres)
-        .where(eq(oauthStateTablePostgres.state, state))
-        .limit(1);
-    }
+    const [oauthState] = await db
+      .select()
+      .from(oauthStateTable)
+      .where(eq(oauthStateTable.state, state))
+      .limit(1);
 
     if (!oauthState) {
       logger.error({ state }, 'OAuth state not found in database');
@@ -139,99 +128,49 @@ export async function GET(request: NextRequest) {
     const encryptedAccessToken = await encrypt(accessToken);
     const encryptedRefreshToken = refreshToken ? await encrypt(refreshToken) : null;
 
-    if (useSQLite) {
-      if (!sqliteDb) throw new Error('SQLite database not initialized');
-
-      // Check if account already exists
-      const [existingAccount] = await sqliteDb
-        .select()
-        .from(accountsTableSQLite)
-        .where(
-          and(
-            eq(accountsTableSQLite.userId, oauthState.userId),
-            eq(accountsTableSQLite.provider, 'twitter')
-          )
+    // Check if account already exists
+    const [existingAccount] = await db
+      .select()
+      .from(accountsTable)
+      .where(
+        and(
+          eq(accountsTable.userId, oauthState.userId),
+          eq(accountsTable.provider, 'twitter')
         )
-        .limit(1);
+      )
+      .limit(1);
 
-      if (existingAccount) {
-        // Update existing account
-        await sqliteDb
-          .update(accountsTableSQLite)
-          .set({
-            access_token: encryptedAccessToken,
-            refresh_token: encryptedRefreshToken || existingAccount.refresh_token,
-            expires_at: expiresAt,
-            providerAccountId: twitterUser.id,
-            account_name: twitterUser.username || null,
-          })
-          .where(eq(accountsTableSQLite.id, existingAccount.id));
-      } else {
-        // Create new account record
-        await sqliteDb.insert(accountsTableSQLite).values({
-          id: `twitter_${twitterUser.id}_${Date.now()}`,
-          userId: oauthState.userId,
-          type: 'oauth',
-          provider: 'twitter',
+    if (existingAccount) {
+      // Update existing account
+      await db
+        .update(accountsTable)
+        .set({
+          access_token: encryptedAccessToken,
+          refresh_token: encryptedRefreshToken || existingAccount.refresh_token,
+          expires_at: expiresAt,
           providerAccountId: twitterUser.id,
           account_name: twitterUser.username || null,
-          access_token: encryptedAccessToken,
-          refresh_token: encryptedRefreshToken,
-          expires_at: expiresAt,
-          token_type: 'bearer',
-          scope: 'tweet.read tweet.write users.read offline.access',
-        });
-      }
-
-      // Clean up OAuth state
-      await sqliteDb.delete(oauthStateTableSQLite).where(eq(oauthStateTableSQLite.state, state));
+        })
+        .where(eq(accountsTable.id, existingAccount.id));
     } else {
-      if (!postgresDb) throw new Error('PostgreSQL database not initialized');
-
-      // Check if account already exists
-      const [existingAccount] = await postgresDb
-        .select()
-        .from(accountsTablePostgres)
-        .where(
-          and(
-            eq(accountsTablePostgres.userId, oauthState.userId),
-            eq(accountsTablePostgres.provider, 'twitter')
-          )
-        )
-        .limit(1);
-
-      if (existingAccount) {
-        // Update existing account
-        await postgresDb
-          .update(accountsTablePostgres)
-          .set({
-            access_token: encryptedAccessToken,
-            refresh_token: encryptedRefreshToken || existingAccount.refresh_token,
-            expires_at: expiresAt,
-            providerAccountId: twitterUser.id,
-            account_name: twitterUser.username || null,
-          })
-          .where(eq(accountsTablePostgres.id, existingAccount.id));
-      } else {
-        // Create new account record
-        await postgresDb.insert(accountsTablePostgres).values({
-          id: `twitter_${twitterUser.id}_${Date.now()}`,
-          userId: oauthState.userId,
-          type: 'oauth',
-          provider: 'twitter',
-          providerAccountId: twitterUser.id,
-          account_name: twitterUser.username || null,
-          access_token: encryptedAccessToken,
-          refresh_token: encryptedRefreshToken,
-          expires_at: expiresAt,
-          token_type: 'bearer',
-          scope: 'tweet.read tweet.write users.read offline.access',
-        });
-      }
-
-      // Clean up OAuth state
-      await postgresDb.delete(oauthStateTablePostgres).where(eq(oauthStateTablePostgres.state, state));
+      // Create new account record
+      await db.insert(accountsTable).values({
+        id: `twitter_${twitterUser.id}_${Date.now()}`,
+        userId: oauthState.userId,
+        type: 'oauth',
+        provider: 'twitter',
+        providerAccountId: twitterUser.id,
+        account_name: twitterUser.username || null,
+        access_token: encryptedAccessToken,
+        refresh_token: encryptedRefreshToken,
+        expires_at: expiresAt,
+        token_type: 'bearer',
+        scope: 'tweet.read tweet.write users.read offline.access',
+      });
     }
+
+    // Clean up OAuth state
+    await db.delete(oauthStateTable).where(eq(oauthStateTable.state, state));
 
     // Return success page that closes the popup and notifies parent
     return new NextResponse(

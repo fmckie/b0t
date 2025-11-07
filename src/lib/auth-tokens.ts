@@ -1,5 +1,5 @@
-import { useSQLite, sqliteDb, postgresDb } from './db';
-import { accountsTableSQLite, accountsTablePostgres } from './schema';
+import { db } from './db';
+import { accountsTable } from './schema';
 import { eq, and } from 'drizzle-orm';
 import { decrypt } from './encryption';
 import { logger } from './logger';
@@ -32,35 +32,16 @@ export async function getOAuthTokens(
   userId: string = '1'
 ): Promise<OAuthTokens | null> {
   try {
-    let account;
-
-    if (useSQLite) {
-      if (!sqliteDb) throw new Error('SQLite database not initialized');
-
-      [account] = await sqliteDb
-        .select()
-        .from(accountsTableSQLite)
-        .where(
-          and(
-            eq(accountsTableSQLite.userId, userId),
-            eq(accountsTableSQLite.provider, provider)
-          )
+    const [account] = await db
+      .select()
+      .from(accountsTable)
+      .where(
+        and(
+          eq(accountsTable.userId, userId),
+          eq(accountsTable.provider, provider)
         )
-        .limit(1);
-    } else {
-      if (!postgresDb) throw new Error('PostgreSQL database not initialized');
-
-      [account] = await postgresDb
-        .select()
-        .from(accountsTablePostgres)
-        .where(
-          and(
-            eq(accountsTablePostgres.userId, userId),
-            eq(accountsTablePostgres.provider, provider)
-          )
-        )
-        .limit(1);
-    }
+      )
+      .limit(1);
 
     if (!account) {
       logger.warn({ provider, userId }, 'OAuth account not found');
@@ -98,35 +79,16 @@ export async function isOAuthConnected(
   userId: string = '1'
 ): Promise<boolean> {
   try {
-    let account;
-
-    if (useSQLite) {
-      if (!sqliteDb) throw new Error('SQLite database not initialized');
-
-      [account] = await sqliteDb
-        .select({ id: accountsTableSQLite.id })
-        .from(accountsTableSQLite)
-        .where(
-          and(
-            eq(accountsTableSQLite.userId, userId),
-            eq(accountsTableSQLite.provider, provider)
-          )
+    const [account] = await db
+      .select({ id: accountsTable.id })
+      .from(accountsTable)
+      .where(
+        and(
+          eq(accountsTable.userId, userId),
+          eq(accountsTable.provider, provider)
         )
-        .limit(1);
-    } else {
-      if (!postgresDb) throw new Error('PostgreSQL database not initialized');
-
-      [account] = await postgresDb
-        .select({ id: accountsTablePostgres.id })
-        .from(accountsTablePostgres)
-        .where(
-          and(
-            eq(accountsTablePostgres.userId, userId),
-            eq(accountsTablePostgres.provider, provider)
-          )
-        )
-        .limit(1);
-    }
+      )
+      .limit(1);
 
     return !!account;
   } catch (error) {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { postgresDb } from '@/lib/db';
-import { workflowsTablePostgres } from '@/lib/schema';
+import { db } from '@/lib/db';
+import { workflowsTable } from '@/lib/schema';
 import { importWorkflow } from '@/lib/workflows/import-export';
 import { executeWorkflow } from '@/lib/workflows/executor';
 import { randomUUID } from 'crypto';
@@ -53,15 +53,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!postgresDb) {
-      throw new Error('Database not initialized');
-    }
-
     // Create workflow in database (use test user ID '1')
     // Admin workflows use null organizationId (not tied to any organization)
     const workflowId = randomUUID();
 
-    await postgresDb.insert(workflowsTablePostgres).values({
+    await db.insert(workflowsTable).values({
       id: workflowId,
       userId: '1', // Test user (admin)
       organizationId: null, // Admin workflows have null organizationId
@@ -89,9 +85,9 @@ export async function POST(request: NextRequest) {
     const duration = Date.now() - startTime;
 
     // Clean up - delete the test workflow
-    await postgresDb
-      .delete(workflowsTablePostgres)
-      .where(eq(workflowsTablePostgres.id, workflowId));
+    await db
+      .delete(workflowsTable)
+      .where(eq(workflowsTable.id, workflowId));
 
     logger.info(
       {

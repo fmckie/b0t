@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { useSQLite, sqliteDb, postgresDb } from '@/lib/db';
-import { accountsTableSQLite, accountsTablePostgres } from '@/lib/schema';
+import { db } from '@/lib/db';
+import { accountsTable } from '@/lib/schema';
 import { eq, and } from 'drizzle-orm';
 import { logger } from '@/lib/logger';
 
@@ -23,32 +23,16 @@ export async function GET() {
     }
 
     // Look up Twitter account in database
-    let twitterAccount;
-    if (useSQLite) {
-      if (!sqliteDb) throw new Error('SQLite database not initialized');
-      [twitterAccount] = await sqliteDb
-        .select()
-        .from(accountsTableSQLite)
-        .where(
-          and(
-            eq(accountsTableSQLite.userId, session.user.id),
-            eq(accountsTableSQLite.provider, 'twitter')
-          )
+    const [twitterAccount] = await db
+      .select()
+      .from(accountsTable)
+      .where(
+        and(
+          eq(accountsTable.userId, session.user.id),
+          eq(accountsTable.provider, 'twitter')
         )
-        .limit(1);
-    } else {
-      if (!postgresDb) throw new Error('PostgreSQL database not initialized');
-      [twitterAccount] = await postgresDb
-        .select()
-        .from(accountsTablePostgres)
-        .where(
-          and(
-            eq(accountsTablePostgres.userId, session.user.id),
-            eq(accountsTablePostgres.provider, 'twitter')
-          )
-        )
-        .limit(1);
-    }
+      )
+      .limit(1);
 
     if (!twitterAccount) {
       return NextResponse.json({
@@ -103,27 +87,14 @@ export async function DELETE() {
     }
 
     // Delete Twitter account from database
-    if (useSQLite) {
-      if (!sqliteDb) throw new Error('SQLite database not initialized');
-      await sqliteDb
-        .delete(accountsTableSQLite)
-        .where(
-          and(
-            eq(accountsTableSQLite.userId, session.user.id),
-            eq(accountsTableSQLite.provider, 'twitter')
-          )
-        );
-    } else {
-      if (!postgresDb) throw new Error('PostgreSQL database not initialized');
-      await postgresDb
-        .delete(accountsTablePostgres)
-        .where(
-          and(
-            eq(accountsTablePostgres.userId, session.user.id),
-            eq(accountsTablePostgres.provider, 'twitter')
-          )
-        );
-    }
+    await db
+      .delete(accountsTable)
+      .where(
+        and(
+          eq(accountsTable.userId, session.user.id),
+          eq(accountsTable.provider, 'twitter')
+        )
+      );
 
     logger.info({ userId: session.user.id }, 'Disconnected Twitter account');
 

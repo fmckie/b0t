@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import { auth } from '@/lib/auth';
-import { useSQLite, sqliteDb, postgresDb } from '@/lib/db';
-import { oauthStateTableSQLite, oauthStateTablePostgres } from '@/lib/schema';
+import { db } from '@/lib/db';
+import { oauthStateTable } from '@/lib/schema';
 import { logger } from '@/lib/logger';
 import crypto from 'crypto';
 
@@ -73,40 +73,17 @@ export async function GET() {
     });
 
     // Store state and code verifier in database for callback verification
-    try {
-      if (useSQLite) {
-        if (!sqliteDb) {
-          throw new Error('SQLite database not initialized');
-        }
-        await sqliteDb.insert(oauthStateTableSQLite).values({
-          state,
-          codeVerifier,
-          userId: session.user.id,
-          provider: 'youtube',
-        });
-      } else {
-        if (!postgresDb) {
-          throw new Error('PostgreSQL database not initialized');
-        }
-        await postgresDb.insert(oauthStateTablePostgres).values({
-          state,
-          codeVerifier,
-          userId: session.user.id,
-          provider: 'youtube',
-        });
-      }
+    await db.insert(oauthStateTable).values({
+      state,
+      codeVerifier,
+      userId: session.user.id,
+      provider: 'youtube',
+    });
 
-      logger.info(
-        { userId: session.user.id, provider: 'youtube' },
-        'YouTube OAuth state stored'
-      );
-    } catch (error) {
-      logger.error({ error }, 'Failed to store YouTube OAuth state');
-      return NextResponse.json(
-        { error: 'Failed to initialize OAuth flow. Please try again.' },
-        { status: 500 }
-      );
-    }
+    logger.info(
+      { userId: session.user.id, provider: 'youtube' },
+      'YouTube OAuth state stored'
+    );
 
     // Redirect to Google OAuth authorization page
     return NextResponse.redirect(authUrl);

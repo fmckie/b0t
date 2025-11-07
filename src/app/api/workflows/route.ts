@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { postgresDb } from '@/lib/db';
-import { workflowsTablePostgres } from '@/lib/schema';
+import { db } from '@/lib/db';
+import { workflowsTable } from '@/lib/schema';
 import { eq, and, isNull } from 'drizzle-orm';
 import { logger } from '@/lib/logger';
 
@@ -21,42 +21,38 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!postgresDb) {
-      throw new Error('Database not initialized');
-    }
-
     // Parse query parameters
     const { searchParams } = new URL(request.url);
     const organizationId = searchParams.get('organizationId');
 
     // Build where clause
-    const whereConditions = [eq(workflowsTablePostgres.userId, session.user.id)];
+    const whereConditions = [eq(workflowsTable.userId, session.user.id)];
 
     if (organizationId) {
       // Filter by specific organization
-      whereConditions.push(eq(workflowsTablePostgres.organizationId, organizationId));
+      whereConditions.push(eq(workflowsTable.organizationId, organizationId));
     } else {
       // Show only admin's personal workflows (not tied to any organization)
-      whereConditions.push(isNull(workflowsTablePostgres.organizationId));
+      whereConditions.push(isNull(workflowsTable.organizationId));
     }
 
-    const workflows = await postgresDb
+    const workflows = await db
       .select({
-        id: workflowsTablePostgres.id,
-        name: workflowsTablePostgres.name,
-        description: workflowsTablePostgres.description,
-        status: workflowsTablePostgres.status,
-        trigger: workflowsTablePostgres.trigger,
-        config: workflowsTablePostgres.config,
-        createdAt: workflowsTablePostgres.createdAt,
-        lastRun: workflowsTablePostgres.lastRun,
-        lastRunStatus: workflowsTablePostgres.lastRunStatus,
-        lastRunOutput: workflowsTablePostgres.lastRunOutput,
-        runCount: workflowsTablePostgres.runCount,
+        id: workflowsTable.id,
+        name: workflowsTable.name,
+        description: workflowsTable.description,
+        status: workflowsTable.status,
+        trigger: workflowsTable.trigger,
+        config: workflowsTable.config,
+        createdAt: workflowsTable.createdAt,
+        lastRun: workflowsTable.lastRun,
+        lastRunStatus: workflowsTable.lastRunStatus,
+        lastRunOutput: workflowsTable.lastRunOutput,
+        runCount: workflowsTable.runCount,
       })
-      .from(workflowsTablePostgres)
+      .from(workflowsTable)
       .where(and(...whereConditions))
-      .orderBy(workflowsTablePostgres.createdAt);
+      .orderBy(workflowsTable.createdAt);
 
     return NextResponse.json({ workflows });
   } catch (error) {

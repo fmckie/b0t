@@ -11,8 +11,8 @@
  *   npx tsx scripts/update-workflow.ts abc123 --name "New Name" --description "Updated description"
  */
 
-import { postgresDb } from '../src/lib/db';
-import { workflowsTablePostgres } from '../src/lib/schema';
+import { db } from '../src/lib/db';
+import { workflowsTable } from '../src/lib/schema';
 import { eq } from 'drizzle-orm';
 
 interface UpdateOptions {
@@ -23,17 +23,12 @@ interface UpdateOptions {
 }
 
 async function updateWorkflow(workflowId: string, options: UpdateOptions): Promise<void> {
-  if (!postgresDb) {
-    console.error('❌ Database not initialized');
-    process.exit(1);
-  }
-
   try {
     // Fetch existing workflow
-    const workflows = await postgresDb
+    const workflows = await db
       .select()
-      .from(workflowsTablePostgres)
-      .where(eq(workflowsTablePostgres.id, workflowId))
+      .from(workflowsTable)
+      .where(eq(workflowsTable.id, workflowId))
       .limit(1);
 
     if (workflows.length === 0) {
@@ -85,10 +80,10 @@ async function updateWorkflow(workflowId: string, options: UpdateOptions): Promi
     }
 
     // Update workflow
-    await postgresDb
-      .update(workflowsTablePostgres)
+    await db
+      .update(workflowsTable)
       .set(updates)
-      .where(eq(workflowsTablePostgres.id, workflowId));
+      .where(eq(workflowsTable.id, workflowId));
 
     console.log('\n✅ Workflow updated successfully!');
     console.log(`🌐 View at: http://localhost:3000/dashboard/workflows`);

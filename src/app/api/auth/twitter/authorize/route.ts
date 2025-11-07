@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { TwitterApi } from 'twitter-api-v2';
 import { auth } from '@/lib/auth';
-import { useSQLite, sqliteDb, postgresDb } from '@/lib/db';
-import { oauthStateTableSQLite, oauthStateTablePostgres } from '@/lib/schema';
+import { db } from '@/lib/db';
+import { oauthStateTable } from '@/lib/schema';
 import { logger } from '@/lib/logger';
 
 /**
@@ -62,23 +62,12 @@ export async function GET() {
     );
 
     // Store state and codeVerifier in database
-    if (useSQLite) {
-      if (!sqliteDb) throw new Error('SQLite database not initialized');
-      await sqliteDb.insert(oauthStateTableSQLite).values({
-        state,
-        codeVerifier,
-        userId: session.user.id,
-        provider: 'twitter',
-      });
-    } else {
-      if (!postgresDb) throw new Error('PostgreSQL database not initialized');
-      await postgresDb.insert(oauthStateTablePostgres).values({
-        state,
-        codeVerifier,
-        userId: session.user.id,
-        provider: 'twitter',
-      });
-    }
+    await db.insert(oauthStateTable).values({
+      state,
+      codeVerifier,
+      userId: session.user.id,
+      provider: 'twitter',
+    });
 
     logger.info(
       { userId: session.user.id, provider: 'twitter' },
