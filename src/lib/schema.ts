@@ -151,6 +151,15 @@ export const workflowsTable = pgTable('workflows', {
       inputs: Record<string, unknown>;
       outputAs?: string;
     }>;
+    returnValue?: string;
+    outputDisplay?: {
+      type: string;
+      columns?: Array<{
+        key: string;
+        label: string;
+        type?: string;
+      }>;
+    };
   }>(),
   trigger: text('trigger').notNull().$type<{
     type: 'cron' | 'manual' | 'webhook' | 'telegram' | 'discord' | 'chat' | 'chat-input';

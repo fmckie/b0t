@@ -266,7 +266,6 @@ function inferColumnsFromData(data: unknown[]): Column[] {
   if (typeof firstItem !== 'object' || firstItem === null) return [];
 
   return Object.keys(firstItem)
-    .slice(0, 8)
     .map((key) => ({
       key,
       label: formatLabel(key),

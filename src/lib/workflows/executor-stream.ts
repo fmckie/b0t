@@ -90,6 +90,7 @@ export async function executeWorkflowWithProgress(
         inputs: Record<string, unknown>;
         outputAs?: string;
       }>;
+      returnValue?: string;
     };
 
     logger.info({ workflowId, stepCount: config.steps.length }, 'Executing workflow steps');
@@ -236,15 +237,20 @@ export async function executeWorkflowWithProgress(
     logger.info({ workflowId, runId, duration: totalDuration }, 'Workflow execution completed');
 
     // Emit workflow completed event
-    // Return all workflow variables for comprehensive output
+    // Return final output - use returnValue if specified, otherwise return all variables
+    let finalOutput: unknown = context.variables;
+    if (config.returnValue) {
+      finalOutput = resolveValue(config.returnValue, context.variables);
+    }
+
     onProgress?.({
       type: 'workflow_completed',
       runId,
       duration: totalDuration,
-      output: context.variables,
+      output: finalOutput,
     });
 
-    return { success: true, output: context.variables };
+    return { success: true, output: finalOutput };
   } catch (error) {
     logger.error({ error, workflowId, userId }, 'Workflow execution failed');
 

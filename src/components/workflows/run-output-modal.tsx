@@ -41,18 +41,36 @@ export function RunOutputModal({
 
   // Extract outputDisplay config from workflow config if provided
   // Transform from workflow JSON format to OutputDisplayConfig format
-  const outputDisplayHint = workflowConfig?.outputDisplay
+  // workflowConfig might be: { config: { outputDisplay: {...} } } OR { steps: [...], outputDisplay: {...} }
+  // OR it might be a string that needs parsing
+  let parsedConfig = workflowConfig;
+
+  // If workflowConfig is a string, parse it
+  if (typeof workflowConfig === 'string') {
+    try {
+      parsedConfig = JSON.parse(workflowConfig);
+    } catch (error) {
+      console.error('Failed to parse workflowConfig:', error);
+      parsedConfig = undefined;
+    }
+  }
+
+  // Try to get outputDisplay from config.outputDisplay first, then from top-level outputDisplay
+  const configObj = (parsedConfig as Record<string, unknown>)?.config as Record<string, unknown> | undefined;
+  const outputDisplay = (configObj?.outputDisplay || (parsedConfig as Record<string, unknown>)?.outputDisplay) as Record<string, unknown> | undefined;
+
+  const outputDisplayHint = outputDisplay
     ? ({
-        type: (workflowConfig.outputDisplay as Record<string, unknown>).type as string,
+        type: outputDisplay.type as string,
         config: {
-          columns: (workflowConfig.outputDisplay as Record<string, unknown>).columns,
+          columns: outputDisplay.columns,
         },
       } as OutputDisplayConfig)
     : undefined;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="!max-w-[98vw] !w-[98vw] max-h-[95vh] overflow-y-auto p-6 pt-12">
+      <DialogContent className="!max-w-[98vw] !w-[98vw] max-h-[95vh] overflow-auto p-6 pt-12">
         <DialogTitle className="sr-only">Workflow Output</DialogTitle>
         <DialogDescription className="sr-only">
           Workflow execution output

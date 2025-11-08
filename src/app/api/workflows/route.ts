@@ -36,7 +36,7 @@ export async function GET(request: Request) {
       whereConditions.push(isNull(workflowsTable.organizationId));
     }
 
-    const workflows = await db
+    const rawWorkflows = await db
       .select({
         id: workflowsTable.id,
         name: workflowsTable.name,
@@ -53,6 +53,13 @@ export async function GET(request: Request) {
       .from(workflowsTable)
       .where(and(...whereConditions))
       .orderBy(workflowsTable.createdAt);
+
+    // Parse config and trigger if they're strings
+    const workflows = rawWorkflows.map((workflow) => ({
+      ...workflow,
+      config: typeof workflow.config === 'string' ? JSON.parse(workflow.config) : workflow.config,
+      trigger: typeof workflow.trigger === 'string' ? JSON.parse(workflow.trigger) : workflow.trigger,
+    }));
 
     return NextResponse.json({ workflows });
   } catch (error) {

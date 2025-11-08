@@ -90,6 +90,7 @@ export async function executeWorkflow(
         inputs: Record<string, unknown>;
         outputAs?: string;
       }>;
+      returnValue?: string;
     };
 
     logger.info({ workflowId, stepCount: config.steps.length }, 'Executing workflow steps');
@@ -206,8 +207,21 @@ export async function executeWorkflow(
 
     logger.info({ workflowId, runId, duration: completedAt.getTime() - startedAt.getTime() }, 'Workflow execution completed');
 
-    // Return all workflow variables for comprehensive output
-    return { success: true, output: context.variables };
+    // Return final output - use returnValue if specified, otherwise return all variables
+    let finalOutput: unknown = context.variables;
+    if (config.returnValue) {
+      logger.info({ returnValue: config.returnValue }, 'EXECUTOR - Using returnValue');
+      finalOutput = resolveValue(config.returnValue, context.variables);
+      logger.info({
+        isArray: Array.isArray(finalOutput),
+        type: typeof finalOutput,
+        length: Array.isArray(finalOutput) ? finalOutput.length : undefined
+      }, 'EXECUTOR - finalOutput resolved');
+    } else {
+      logger.info('EXECUTOR - No returnValue config, returning all variables');
+    }
+
+    return { success: true, output: finalOutput };
   } catch (error) {
     logger.error({ error, workflowId, userId }, 'Workflow execution failed');
 

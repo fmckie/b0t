@@ -22,6 +22,7 @@ interface OutputRendererProps {
 }
 
 export function OutputRenderer({ output, modulePath, displayHint }: OutputRendererProps) {
+
   // Auto-parse JSON strings for table display
   // If output is a JSON string and displayHint expects a table, parse it
   let parsedOutput = output;
@@ -35,6 +36,20 @@ export function OutputRenderer({ output, modulePath, displayHint }: OutputRender
     } catch (error) {
       // If parsing fails, keep original output
       console.warn('Failed to parse output as JSON:', error);
+    }
+  }
+
+  // Extract table data from context object if needed
+  // If output is an object (not array) and we expect a table, look for common table data keys
+  if (typeof parsedOutput === 'object' && parsedOutput !== null && !Array.isArray(parsedOutput) && displayHint?.type === 'table') {
+    const outputObj = parsedOutput as Record<string, unknown>;
+    const possibleDataKeys = ['finalAnalysisTable', 'finalTableData', 'tableData', 'results', 'data', 'output'];
+
+    for (const key of possibleDataKeys) {
+      if (key in outputObj && Array.isArray(outputObj[key])) {
+        parsedOutput = outputObj[key];
+        break;
+      }
     }
   }
 
