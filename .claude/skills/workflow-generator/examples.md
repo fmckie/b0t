@@ -110,6 +110,60 @@ Common workflow patterns to reference when generating new workflows.
 
 ---
 
+## 2b. AI Text Generation with System Prompt
+
+**Pattern:** User message → AI text generation with system instructions → Response
+
+**What this shows:** Using `generateText` with `systemPrompt` for simpler single-turn interactions. Alternative to `chat` when you don't need conversation history.
+
+```json
+{
+  "version": "1.0",
+  "name": "Code Explainer Bot",
+  "description": "Explain code snippets using OpenAI with system instructions",
+  "trigger": {
+    "type": "chat",
+    "config": {
+      "inputVariable": "userMessage"
+    }
+  },
+  "config": {
+    "steps": [
+      {
+        "id": "explain",
+        "module": "ai.ai-sdk.generateText",
+        "inputs": {
+          "options": {
+            "prompt": "{{trigger.userMessage}}",
+            "systemPrompt": "You are an expert programmer. Explain code clearly and concisely, highlighting key concepts and potential issues.",
+            "model": "gpt-4o-mini",
+            "provider": "openai",
+            "temperature": 0.7,
+            "maxTokens": 500
+          }
+        },
+        "outputAs": "explanation"
+      }
+    ],
+    "returnValue": "{{explanation.content}}",
+    "outputDisplay": {
+      "type": "markdown"
+    }
+  },
+  "metadata": {
+    "requiresCredentials": ["openai"]
+  }
+}
+```
+
+**Key differences from `chat`:**
+- `generateText` uses `prompt` + `systemPrompt` (simpler, single-turn)
+- `chat` uses `messages` array (supports conversation history)
+- Both require extracting `.content` for text output
+- Both use `"inputs": { "options": { ... } }` wrapper
+
+---
+
 ## 3. AI Content Generation with String Processing
 
 **Pattern:** Generate AI text → Process/format → Use in downstream steps

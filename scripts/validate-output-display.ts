@@ -228,12 +228,18 @@ function validateOutputDisplay(workflow: Workflow): void {
   }
 
   if (expectedType === 'string' && inferredType === 'object') {
-    issues.push({
-      severity: 'error',
-      message: `Output type mismatch: Display expects "text/markdown" (string) but final step "${finalStepModule}" returns object`,
-      suggestion: `If this is an AI SDK module, access the .content property using returnValue`,
-      example: `Add to config:\n"returnValue": "{{${finalStepOutputAs}.content}}"`,
-    });
+    // Check if returnValue already extracts .content
+    const hasContentExtraction = returnValue?.includes('.content');
+
+    if (!hasContentExtraction) {
+      issues.push({
+        severity: 'error',
+        message: `Output type mismatch: Display expects "text/markdown" (string) but final step "${finalStepModule}" returns object`,
+        suggestion: `If this is an AI SDK module, access the .content property using returnValue`,
+        example: `Add to config:\n"returnValue": "{{${finalStepOutputAs}.content}}"`,
+      });
+    }
+    // If .content is already being extracted, type is actually string - no error needed
   }
 
   if (expectedType === 'number' && inferredType !== 'number') {
