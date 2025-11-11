@@ -35,11 +35,12 @@ if (enableFileLogs && typeof window === 'undefined') {
 
 // Create custom formatter for development logs
 const devFormatter = (obj: Record<string, unknown>) => {
-  const { level, msg, ...rest } = obj;
+  const { msg, ...rest } = obj;
   const cleanRest = { ...rest };
   delete cleanRest.time;
   delete cleanRest.pid;
   delete cleanRest.hostname;
+  delete cleanRest.level;
 
   const hasMetadata = Object.keys(cleanRest).length > 0;
   return hasMetadata ? `${msg}` : msg as string;

@@ -53,7 +53,7 @@ class WorkflowScheduler {
           'Workflow scheduler initialized with cron workflows'
         );
       }
-    } catch (error) {
+    } catch {
       // Error already logged by syncWorkflows, don't log again
     }
   }
