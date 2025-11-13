@@ -12,6 +12,8 @@ export const dynamic = 'force-dynamic';
  * List all workflows for the authenticated user
  * Query params:
  *   - organizationId: Filter by organization/client
+ *   - page: Page number (default: 1)
+ *   - limit: Items per page (default: 50, max: 100)
  */
 export async function GET(request: Request) {
   try {
@@ -24,6 +26,9 @@ export async function GET(request: Request) {
     // Parse query parameters
     const { searchParams } = new URL(request.url);
     const organizationId = searchParams.get('organizationId');
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50', 10)));
+    const offset = (page - 1) * limit;
 
     // Build where clause
     const whereConditions = [eq(workflowsTable.userId, session.user.id)];
@@ -71,7 +76,18 @@ export async function GET(request: Request) {
         workflowsTable.lastRunOutput,
         workflowsTable.runCount
       )
-      .orderBy(workflowsTable.createdAt);
+      .orderBy(workflowsTable.createdAt)
+      .limit(limit)
+      .offset(offset);
+
+    // Get total count for pagination metadata
+    const totalCountResult = await db
+      .select({ count: sql<number>`COUNT(DISTINCT ${workflowsTable.id})` })
+      .from(workflowsTable)
+      .where(and(...whereConditions));
+
+    const totalCount = totalCountResult[0]?.count || 0;
+    const totalPages = Math.ceil(totalCount / limit);
 
     // Parse config and trigger if they're strings
     const workflows = rawWorkflows.map((workflow) => {
@@ -83,7 +99,17 @@ export async function GET(request: Request) {
       };
     });
 
-    return NextResponse.json({ workflows });
+    return NextResponse.json({
+      workflows,
+      pagination: {
+        page,
+        limit,
+        totalCount,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    });
   } catch (error) {
     logger.error(
       {

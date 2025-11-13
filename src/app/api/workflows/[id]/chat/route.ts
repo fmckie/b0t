@@ -8,6 +8,7 @@ import { eq, and } from 'drizzle-orm';
 import { executeWorkflowConfig } from '@/lib/workflows/executor';
 import { logger } from '@/lib/logger';
 import { nanoid } from 'nanoid';
+import { auth } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -29,8 +30,30 @@ export async function GET(
   const conversationId = searchParams.get('conversationId');
 
   try {
+    // Verify authentication
+    const session = await auth();
+    if (!session?.user?.id) {
+      return new Response('Unauthorized', { status: 401 });
+    }
+
     if (!conversationId) {
       return new Response('conversationId is required', { status: 400 });
+    }
+
+    // Verify workflow ownership first
+    const workflows = await db
+      .select()
+      .from(workflowsTable)
+      .where(
+        and(
+          eq(workflowsTable.id, workflowId),
+          eq(workflowsTable.userId, session.user.id)
+        )
+      )
+      .limit(1);
+
+    if (workflows.length === 0) {
+      return new Response('Workflow not found or access denied', { status: 404 });
     }
 
     // Fetch conversation
@@ -81,20 +104,31 @@ export async function POST(
 ) {
   const { id: workflowId } = await params;
   try {
+    // Verify authentication
+    const session = await auth();
+    if (!session?.user?.id) {
+      return new Response('Unauthorized', { status: 401 });
+    }
+
     const { messages, conversationId } = await request.json();
 
     logger.info({ workflowId, conversationId }, 'Chat request received');
 
-    // Fetch workflow
+    // Fetch workflow with ownership verification
     const workflows = await db
       .select()
       .from(workflowsTable)
-      .where(eq(workflowsTable.id, workflowId))
+      .where(
+        and(
+          eq(workflowsTable.id, workflowId),
+          eq(workflowsTable.userId, session.user.id)
+        )
+      )
       .limit(1);
 
     if (workflows.length === 0) {
-      logger.warn({ workflowId }, 'Workflow not found');
-      return new Response('Workflow not found', { status: 404 });
+      logger.warn({ workflowId, userId: session.user.id }, 'Workflow not found or access denied');
+      return new Response('Workflow not found or access denied', { status: 404 });
     }
 
     const workflow = workflows[0];
